@@ -1,6 +1,6 @@
 {
   "name": "gpx2geo",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "GPX to GeoJSON",
   "keywords": [
     "GPX",
