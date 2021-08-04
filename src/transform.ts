@@ -16,7 +16,8 @@ function transform({ gpx: { trk } }: GPX): GeoJSON {
     if (data.ele !== undefined) point.push(data.ele);
     return point;
   }
-  const multiLines = trk.map(({ trkseg: { trkpt } }) => {
+  const track = Array.isArray(trk) ? trk : [trk];
+  const multiLines = track.map(({ trkseg: { trkpt } }) => {
     if (Array.isArray(trkpt)) return trkpt.map(trackPoint);
     return [trackPoint(trkpt)];
   });
