@@ -1,5 +1,5 @@
 {
-  "name": "gpx2geo",
+  "name": "@surflog/gpx2geo",
   "version": "1.0.1",
   "description": "GPX to GeoJSON",
   "keywords": [
