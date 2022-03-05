@@ -1,27 +1,52 @@
-import { GeoJSON, GeoJsonProperties } from 'geojson';
-import { multiLineString as turfMultiLineString } from '@turf/helpers';
+import { featureCollection, lineString, Feature, LineString, Position, Properties } from '@turf/helpers';
+import bbox from '@turf/bbox';
 import { GPX, TrackPoint } from './index.d';
 
-function dateStrToTimestamp(time: string) {
-  return (new Date(time)).getTime();
+function getPosition({ '@_lon': lon, '@_lat': lat, ele }: TrackPoint): Position {
+  const position = [Number(lon), Number(lat)];
+  if (ele !== undefined) position.push(Number(ele));
+  return position;
 }
 
-function transform({ gpx: { trk } }: GPX): GeoJSON {
-  const coordsMeta = [] as GeoJsonProperties[];
-  function trackPoint(data: TrackPoint) {
-    const meta = Object.assign({}, data) as GeoJsonProperties;
-    if (meta !== null && data.time !== undefined) meta.time = dateStrToTimestamp(data.time);
-    coordsMeta.push(meta);
-    const point = [parseFloat(data['@_lon']), parseFloat(data['@_lat'])];
-    if (data.ele !== undefined) point.push(data.ele);
-    return point;
+function getRecords(trackPoints: TrackPoint[], index: number) {
+  if (index > 0) {
+    return [trackPoints[index - 1], trackPoints[index]];
   }
-  const track = Array.isArray(trk) ? trk : [trk];
-  const multiLines = track.map(({ trkseg: { trkpt } }) => {
-    if (Array.isArray(trkpt)) return trkpt.map(trackPoint);
-    return [trackPoint(trkpt)];
-  });
-  return turfMultiLineString(multiLines, { coordsMeta });
+  if (trackPoints.length === 1) {
+    return [trackPoints[index], trackPoints[index]];
+  }
+  return [trackPoints[index], trackPoints[index + 1]];
+}
+
+function mapProperties(trackPoint: Properties) {
+  return {
+    ...trackPoint,
+    timestamp: trackPoint?.time as string,
+  }
+}
+
+function makeLineStringFeature(accumulator: Feature<LineString, Properties>[], currentValue: TrackPoint, index: number, trackPoints: TrackPoint[]) {
+  accumulator.push(lineString(getRecords(trackPoints, index).map(getPosition), mapProperties(currentValue)));
+  return accumulator;
+}
+
+function makeTrackPoints(trk: GPX['gpx']['trk']) {
+  const trkData = Array.isArray(trk) ? trk : [trk];
+  return trkData.reduce((trackPoints, { trkseg: { trkpt } }) => {
+    if (Array.isArray(trkpt)) {
+      trackPoints.push(...trkpt);
+    } else {
+      trackPoints.push(trkpt);
+    }
+    return trackPoints;
+  }, [] as TrackPoint[]);
+}
+
+function transform({ gpx: { trk } }: GPX) {
+  const trackPoints = makeTrackPoints(trk);
+  const lineStringFeatures = featureCollection(trackPoints.reduce(makeLineStringFeature, []));
+  lineStringFeatures.bbox = bbox(lineStringFeatures);
+  return lineStringFeatures;
 }
 
 export default transform;

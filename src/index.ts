@@ -1,8 +1,7 @@
-import { GeoJSON } from 'geojson';
 import parse from './parse';
 import transform from './transform';
 
-function handler(buffer: ArrayBuffer): GeoJSON {
+function handler(buffer: ArrayBuffer) {
   return transform(parse(buffer));
 }
 
